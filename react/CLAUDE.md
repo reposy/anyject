@@ -12,10 +12,11 @@
 
 ## 스택과 배포
 
-- React + Vite + TypeScript, Cloudflare Pages 정적 배포. 라이브러리는 현재 안정 버전 기준.
-- 라우팅: react-router 라이브러리 모드(`createBrowserRouter` + `RouterProvider`). 프레임워크 모드, SSR, 프리렌더는 쓰지 않는다. SPA 폴백을 위해 `public/404.html`을 만들지 말 것.
+- React + Vite + TypeScript, Cloudflare Workers 정적 자산 배포(`wrangler.jsonc`, Worker 이름 `anyject`, 정적 자산만 서빙하고 Worker 스크립트 없음). 배포는 대시보드의 GitHub 연동 빌드(Workers Builds)로 한다. 라이브러리는 현재 안정 버전 기준.
+- 라우팅: react-router 라이브러리 모드(`createBrowserRouter` + `RouterProvider`). 프레임워크 모드, SSR, 프리렌더는 쓰지 않는다. SPA 폴백은 `wrangler.jsonc`의 `assets.not_found_handling: "single-page-application"`으로 처리하므로 `public/404.html`을 만들지 말 것.
+- 청크 로드 실패(새 배포 후 이전 청크 소실)는 두 최상위 라우트의 `errorElement`(`RouteErrorPage`)가 새로고침 안내로 처리한다.
 - `<title>`, `<meta>`, `<link>`는 React 19 문서 메타데이터 기능(컴포넌트 안에서 직접 렌더)으로 출력한다. 헤드 관리 라이브러리 설치 금지.
-- 데이터가 필요해지면 AWS Lambda 연동 예정(현재 없음).
+- 데이터가 필요해지면 API는 기본적으로 Cloudflare Workers로 추가하고, 실행 시간/메모리/언어 제약에 걸리는 작업만 AWS Lambda로 분리한다(현재 백엔드 없음. `../docs/decisions.md` 참고).
 
 ## 저장소 구조
 
@@ -28,6 +29,7 @@
 - `npm run build` — `tsc -b` 후 `vite build` (출력: `dist/`)
 - `npm run lint` — ESLint 전체
 - `npm run preview` — 프로덕션 빌드 로컬 서빙
+- `npm run preview:cf` — `wrangler dev`로 `dist/`를 Workers 정적 자산 방식으로 로컬 서빙(SPA 폴백 확인용, 로그인 불필요). 먼저 `npm run build` 필요. `wrangler login`/`wrangler deploy`는 실행하지 않는다(배포는 GitHub 연동).
 - 테스트 러너 없음(Vitest 도입 예정, 미설치). 단일 파일 린트: `npx eslint src/App.tsx`
 
 ## TypeScript 설정 주의점
@@ -36,7 +38,7 @@
 
 ## 폴더 규칙
 
-- `src/app`: 라우터(`router.tsx`), 레이아웃(`SiteLayout`, `EmbedLayout`), 홈/404 페이지, `ToyView`, `EmbedHead`, 사이트명(`site.ts`)
+- `src/app`: 라우터(`router.tsx`), 레이아웃(`SiteLayout`, `EmbedLayout`), 홈/404 페이지, 로드 실패 화면(`RouteErrorPage`), `ToyView`, `EmbedHead`, 사이트명(`site.ts`)
 - `src/shared` (예정): 공용 UI, 훅, 유틸. 공용화할 코드가 생기면 만든다.
 - `src/toys/<slug>/`: 토이 하나 = 폴더 하나 (`meta.ts`, 페이지 컴포넌트, 필요 시 engine/worker)
 - `src/toys/types.ts`: `ToyMeta` 타입 (slug, title, description, load)
@@ -63,8 +65,8 @@
 
 - 직접 URL `/<slug>`: 헤더, 푸터 포함(`SiteLayout`). 내비는 홈 링크뿐.
 - 임베드 `/embed/<slug>`: 토이만 표시(`EmbedLayout`), `noindex`, canonical은 직접 URL(`EmbedHead`, origin은 `window.location.origin`).
-- `/embed` 단독과 미등록 경로는 404 페이지(`noindex` 포함. Pages SPA 폴백이 200을 반환하기 때문).
-- 임베드 경로만 `blog.<domain>`에서 iframe 허용(`frame-ancestors`, Cloudflare `_headers`로 설정 예정, 아직 없음).
+- `/embed` 단독과 미등록 경로는 404 페이지(`noindex` 포함. SPA 폴백이 200을 반환하기 때문).
+- 임베드 경로만 `blog.<domain>`에서 iframe 허용(`frame-ancestors`, 설정 방식은 도메인 확정 후 결정. `_headers` 파일은 아직 만들지 않는다).
 - 같은 토이 컴포넌트(`ToyView`)를 두 레이아웃에서 재사용한다.
 
 ## 광고

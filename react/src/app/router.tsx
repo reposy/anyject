@@ -5,6 +5,7 @@ import { EmbedHead } from './EmbedHead.tsx'
 import { EmbedLayout } from './EmbedLayout.tsx'
 import { HomePage } from './HomePage.tsx'
 import { NotFoundPage } from './NotFoundPage.tsx'
+import { RouteErrorPage } from './RouteErrorPage.tsx'
 import { SiteLayout } from './SiteLayout.tsx'
 import { ToyView } from './ToyView.tsx'
 
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
   {
     path: 'embed',
     element: <EmbedLayout />,
+    errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <NotFoundPage /> },
       ...toyViews.map(({ slug, view }) => ({
@@ -40,6 +42,7 @@ export const router = createBrowserRouter([
   },
   {
     element: <SiteLayout />,
+    errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <HomePage /> },
       ...toyViews.map(({ slug, view }) => ({ path: slug, element: view })),

@@ -39,3 +39,15 @@
 - 결정: `ToyMeta`는 `slug`, `title`, `description`, `load`(lazy 로더)만 둔다.
 - 이유: 현재 라우트, 홈 목록, `<title>`에 필요한 것만 둔다(적정 기술).
 - 재검토 조건: 홈에서 아이콘, 태그, 정렬 등이 필요해질 때 필드 추가
+
+## 2026-09-20 [repo] 배포 대상: Pages 대신 Cloudflare Workers 정적 자산
+
+- 결정: 배포 대상을 Cloudflare Pages에서 Workers 정적 자산으로 한다(`react/wrangler.jsonc`, Worker 이름 `anyject`, `assets.not_found_handling: "single-page-application"`, Worker 스크립트 없음). 배포는 대시보드의 GitHub 연동 빌드(Workers Builds)로 한다. 앞선 라우터 결정의 "Pages SPA 폴백" 전제는 이 결정으로 대체된다.
+- 이유: Cloudflare가 신규 프로젝트에 Pages 대신 Workers 정적 자산을 권장하고 Pages는 유지 모드이며, 비용은 동일하다.
+- 재검토 조건: Workers Builds가 모노레포 루트 디렉터리/빌드 감시 경로를 지원하지 않을 때
+
+## 2026-09-20 [repo] 백엔드 방침: 기본 Cloudflare Workers, 예외적으로 AWS Lambda
+
+- 결정: API는 기본적으로 Cloudflare Workers로 추가한다. 실행 시간, 메모리, 언어(Java 등) 제약에 걸리는 작업만 예외적으로 AWS Lambda로 분리한다.
+- 이유: 관리 지점을 최소화한다.
+- 재검토 조건: Lambda로 분리된 작업이 여러 개로 늘어날 때

@@ -1,0 +1,46 @@
+.site {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
+
+.site-header,
+.site-footer {
+  padding: 1rem;
+  border-color: color-mix(in srgb, currentColor 20%, transparent);
+  border-style: solid;
+  border-width: 0;
+}
+
+.site-header {
+  border-bottom-width: 1px;
+}
+
+.site-footer {
+  border-top-width: 1px;
+  font-size: 0.875rem;
+}
+
+.site-name {
+  font-weight: 700;
+  text-decoration: none;
+  color: inherit;
+}
+
+.site-main {
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.toy-list {
+  list-style: none;
+  padding: 0;
+}
+
+.toy-list li + li {
+  margin-top: 1rem;
+}

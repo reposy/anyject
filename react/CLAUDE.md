@@ -8,11 +8,13 @@
 
 ## 현재 상태
 
-Vite React + TS 템플릿 그대로다(`src/App.tsx`는 카운터 데모). 아래 "(예정)" 표기는 아직 존재하지 않는 구조이며, 구현되기 전까지 있는 것처럼 다루지 말 것.
+사이트 골격 완료: 레지스트리 기반 라우팅(`/`, `/<slug>`, `/embed/<slug>`, 404)과 레이아웃 두 벌이 동작한다. 유일한 토이 `lotto`는 "준비 중" 페이지뿐이며 engine, worker, 테스트는 아직 없다. "(예정)" 표기는 아직 존재하지 않는 구조이며, 구현되기 전까지 있는 것처럼 다루지 말 것.
 
 ## 스택과 배포
 
 - React + Vite + TypeScript, Cloudflare Pages 정적 배포. 라이브러리는 현재 안정 버전 기준.
+- 라우팅: react-router 라이브러리 모드(`createBrowserRouter` + `RouterProvider`). 프레임워크 모드, SSR, 프리렌더는 쓰지 않는다. SPA 폴백을 위해 `public/404.html`을 만들지 말 것.
+- `<title>`, `<meta>`, `<link>`는 React 19 문서 메타데이터 기능(컴포넌트 안에서 직접 렌더)으로 출력한다. 헤드 관리 라이브러리 설치 금지.
 - 데이터가 필요해지면 AWS Lambda 연동 예정(현재 없음).
 
 ## 저장소 구조
@@ -32,19 +34,24 @@ Vite React + TS 템플릿 그대로다(`src/App.tsx`는 카운터 데모). 아�
 
 `tsconfig.app.json`: `verbatimModuleSyntax`(타입은 `import type`), `erasableSyntaxOnly`(`enum`/namespace/생성자 파라미터 프로퍼티 금지), `noUnusedLocals`/`noUnusedParameters`.
 
-## 폴더 규칙 (예정)
+## 폴더 규칙
 
-- `src/app`: 라우터, 레이아웃
-- `src/shared`: 공용 UI, 훅, 유틸
-- `src/toys/<slug>/`: 토이 하나 = 폴더 하나 (meta, 페이지, 필요 시 engine/worker)
-- `src/toys/registry.ts`: 모든 토이 meta를 모으는 단일 출처. 라우트, 홈 목록 등은 여기서 생성한다.
+- `src/app`: 라우터(`router.tsx`), 레이아웃(`SiteLayout`, `EmbedLayout`), 홈/404 페이지, `ToyView`, `EmbedHead`, 사이트명(`site.ts`)
+- `src/shared` (예정): 공용 UI, 훅, 유틸. 공용화할 코드가 생기면 만든다.
+- `src/toys/<slug>/`: 토이 하나 = 폴더 하나 (`meta.ts`, 페이지 컴포넌트, 필요 시 engine/worker)
+- `src/toys/types.ts`: `ToyMeta` 타입 (slug, title, description, load)
+- `src/toys/registry.ts`: 모든 토이 meta를 모으는 단일 출처(`toys` 배열). 라우트, 홈 목록 등은 여기서 생성한다.
 - 토이 목록/설명은 레지스트리와 각 meta를 참고한다. 별도 목록 문서를 만들지 말 것(중복 금지).
 
-## 새 토이 추가 절차 (예정)
+## 새 토이 추가 절차
 
-1. 폴더 생성 → 2. meta 작성 → 3. 레지스트리 등록 → 4. 코드만으로 알 수 없는 도메인 규칙이 있을 때만 해당 폴더에 CLAUDE.md 작성.
+1. `src/toys/<slug>/` 폴더 생성
+2. `meta.ts`에 `ToyMeta` 작성. `load: () => import('./<Page>.tsx')`
+3. 페이지 컴포넌트를 default export로 작성
+4. `src/toys/registry.ts`의 `toys`에 meta 추가. 라우트와 홈 목록은 자동 반영되므로 `router.tsx`는 건드리지 않는다.
+5. 코드만으로 알 수 없는 도메인 규칙이 있을 때만 해당 폴더에 CLAUDE.md 작성.
 
-토이 컴포넌트는 `React.lazy`로 코드 분할한다.
+토이 컴포넌트는 `React.lazy`(`router.tsx`에서 생성)와 `Suspense`(`ToyView`)로 코드 분할한다. `lazy`는 렌더 중에 만들지 말 것(`react-hooks/static-components` 린트).
 
 ## 계층 원칙
 
@@ -52,12 +59,13 @@ Vite React + TS 템플릿 그대로다(`src/App.tsx`는 카운터 데모). 아�
 - 무거운 연산은 Web Worker에서 실행한다. 메인 스레드 블로킹 금지.
 - UI는 hook을 통해 engine/worker 상태를 구독한다.
 
-## 레이아웃 두 벌 (예정)
+## 레이아웃 두 벌
 
-- 직접 URL `/<slug>`: 헤더, 내비, 푸터 포함.
-- 임베드 `/embed/<slug>`: 토이만 표시, `noindex`, canonical은 직접 URL.
-- 임베드 경로만 `blog.<domain>`에서 iframe 허용(`frame-ancestors`, Cloudflare `_headers`로 설정 예정).
-- 같은 토이 컴포넌트를 두 레이아웃에서 재사용한다.
+- 직접 URL `/<slug>`: 헤더, 푸터 포함(`SiteLayout`). 내비는 홈 링크뿐.
+- 임베드 `/embed/<slug>`: 토이만 표시(`EmbedLayout`), `noindex`, canonical은 직접 URL(`EmbedHead`, origin은 `window.location.origin`).
+- `/embed` 단독과 미등록 경로는 404 페이지(`noindex` 포함. Pages SPA 폴백이 200을 반환하기 때문).
+- 임베드 경로만 `blog.<domain>`에서 iframe 허용(`frame-ancestors`, Cloudflare `_headers`로 설정 예정, 아직 없음).
+- 같은 토이 컴포넌트(`ToyView`)를 두 레이아웃에서 재사용한다.
 
 ## 광고
 

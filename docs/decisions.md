@@ -83,3 +83,37 @@
 
 - 결정: 요약 계산(`summarize`)은 `Record<Rank, number>` 당첨금 표를 인자로 받는다. engine이 export하는 상수는 4·5등 고정 금액(50,000원/5,000원)뿐이며, 1~3등 금액은 engine에 넣지 않는다.
 - 이유: 1~3등은 회차마다 달라 평균 추정치를 쓰고, 그 기준(기간, 출처)은 아직 미정이므로 호출 측(UI)이 정한다.
+
+## 2026-09-21 [react] 로또 engine 할당 제거 최적화 (앞선 "최적화 미도입"을 대체)
+
+- 결정: 시도마다 새로 만들던 번호 풀, slice, sort, filter/includes를 없앴다. `runBatch` 호출 안에서만 존재하는 재사용 버퍼(`Uint8Array`: 번호 풀 45, 자동 티켓 6, 조회 표 46)와 상수 조회 표(`IDENTITY`)를 쓴다. 번호 뽑기(`sampleInto`)와 등수 판정(`judge`)은 각각 한 곳에만 있고, 공개 함수(`pickDistinct`, `rankOf` 등)와 핫 루프가 같은 코드를 탄다. 뽑을 때마다 풀을 1..45로 되돌려 rng 호출 순서·횟수와 결과가 최적화 전과 동일하다. 정렬과 배열 생성은 정지 시점에 저장하는 티켓/추첨에만 한다.
+- 근거(측정): Node v24.21.0, AMD Ryzen 5 7500X3D, `Math.random` 주입, 100만 시도, 워밍업 후 5회 중앙값(브라우저 Worker의 절대값은 다를 수 있다).
+  - 자동: 4,280 → 140 ns/시도 (약 30배)
+  - 고정: 2,170 → 87 ns/시도 (약 25배)
+  - Worker와 같은 1,000시도 청크 반복도 차이 없음(자동 134, 고정 82 ns).
+  - 결과적으로 목표 1등(기대 약 815만 시도)은 Node에서 평균 1~2초 안팎이다.
+- 검증: 최적화 전 engine으로 기록한 골든 테스트(자동/고정 × 목표 1~4등, target/limit 정지, 고정 시드 16건의 attempts, wins, stop 전체)와 기존 테스트가 수정 없이 통과한다.
+- 이유: 자동 방식 시도당 약 4~5µs로는 1등 기대 시도를 감당하기 어렵다.
+
+## 2026-09-21 [react] 로또 설정 검증은 engine의 순수 함수 `validateConfig`
+
+- 결정: `validateConfig(config)`가 `target`(1~4 정수), `maxAttempts`(null 또는 1 이상의 안전 정수), 고정 티켓(`validateTicket`)을 이 순서로 검사해 첫 오류를 예외 없이 값(`{ ok, config | error }`)으로 돌려준다. 성공 시 티켓이 정렬된 새 config를 돌려준다. 호출은 hook의 `start` 전(무효면 Worker를 만들지 않고 결과를 반환)과 Worker의 `start` 수신 시(실패하면 `error` 메시지) 두 곳이다.
+- 이유: 검증 규칙을 engine 한 곳에 두어 단위 테스트로 검증하고, hook/Worker(테스트 없음)는 얇게 유지한다. Worker 재검증은 메시지 경계의 방어선이다.
+
+## 2026-09-21 [react] 로또 Worker 프로토콜과 실행 방식
+
+- 결정: 메시지는 판별 유니언(`protocol.ts`, enum 없음). 메인→Worker: `start{config}`, `pause`, `resume`. Worker→메인: `progress{state}`, `finished{state}`, `error{message}`. Worker 하나는 `start`를 한 번만 처리하고, 재시작은 항상 기존 Worker를 dispose(핸들러 분리 → terminate)한 뒤 새 Worker를 만든다. 사용자 정지 메시지는 두지 않는다.
+- 실행: `runBatch`를 1,000시도 청크로 반복하되 20ms 슬라이스마다 `MessageChannel` 자기 메시지로 이벤트 루프에 양보해 pause를 받는다(`setTimeout(0)`은 4ms 클램프 때문에 쓰지 않음). 진행 상태는 100ms(초당 10회)마다 보내고, pause 처리 시 현재 상태를 즉시 한 번 보낸다. rng는 Worker에서 `Math.random`을 주입한다.
+- 이유: 재시작 시 이전 run의 메시지가 새 run과 섞여 hook이 오전환하는 경쟁을 구조적으로 없앤다. 슬라이스와 전송 주기는 pause 반응성과 메인 스레드 렌더 부하의 절충이다.
+- 재검토 조건: 실제 UI에서 진행 갱신이 부담되거나 pause 반응이 느릴 때 값 조정
+
+## 2026-09-21 [react] 로또 hook status 모델과 사용자 정지
+
+- 결정: `useLottoSimulation`의 status는 `idle | running | paused | finished | stopped | error`. `finished`는 engine 정지(`state.stop !== null`), `stopped`는 사용자 정지(`state.stop === null`)이며 engine의 `StopReason`에는 사용자 정지를 넣지 않는다. 사용자 정지는 응답을 기다리지 않고 Worker를 즉시 dispose하며 마지막으로 받은 `SimState`를 유지한다(최대 ~100ms 이전 값). `reset`은 idle과 초기 상태로 돌린다. `worker.onerror`, `onmessageerror`, `error` 메시지는 모두 `error` status로 처리하고 Worker를 dispose한다. hook은 `summarize`를 호출하지 않는다(당첨금 표는 UI가 정한다).
+- Worker는 이펙트가 아니라 `start()`에서 만들고, 언마운트 이펙트는 dispose만 하므로 StrictMode의 이중 이펙트에서도 누수가 없다.
+- 이유: 정지 응답 대기 상태와 Worker 무응답 시 멈춤 위험이 최대 100ms 정확도 차이보다 비용이 크다.
+
+## 2026-09-21 [react] 로또 DEV 전용 검증 화면
+
+- 결정: `LottoPage`는 `import.meta.env.DEV`일 때만 스타일 없는 `DevPanel`(조작 버튼과 status/SimState JSON)을 렌더하고, 프로덕션은 기존 "준비 중"을 유지한다. 프로덕션 빌드에서 DevPanel은 트리셰이킹되며(로또 청크에 없음) Worker 파일은 별도 자산으로 emit되지만 프로덕션에서는 로드되지 않는다. 프로덕션의 Worker 번들 검증은 Phase 5에서 UI와 함께 한다.
+- 이유: UI(Phase 5) 전에 Worker와 hook을 사람이 직접 조작해 검증하기 위해서다.

@@ -8,7 +8,7 @@
 
 ## 현재 상태
 
-사이트 골격 완료: 레지스트리 기반 라우팅(`/`, `/<slug>`, `/embed/<slug>`, 404)과 레이아웃 두 벌이 동작한다. 로또 engine(`src/toys/lotto/engine.ts`)과 단위 테스트(Vitest)가 있다. 유일한 토이 `lotto`의 화면은 아직 "준비 중" 페이지뿐이며 worker, hook, UI는 없다. "(예정)" 표기는 아직 존재하지 않는 구조이며, 구현되기 전까지 있는 것처럼 다루지 말 것.
+사이트 골격 완료: 레지스트리 기반 라우팅(`/`, `/<slug>`, `/embed/<slug>`, 404)과 레이아웃 두 벌이 동작한다. 로또 engine(`src/toys/lotto/engine.ts`)과 단위 테스트(Vitest), Worker와 hook(`worker.ts`, `useLottoSimulation.ts`)이 있다. 유일한 토이 `lotto`의 화면은 프로덕션에서 아직 "준비 중" 페이지뿐이고, 개발 서버(`import.meta.env.DEV`)에서만 임시 검증 화면(`DevPanel.tsx`)이 뜬다. 로또 UI는 없다. hook과 Worker에는 단위 테스트가 없다. "(예정)" 표기는 아직 존재하지 않는 구조이며, 구현되기 전까지 있는 것처럼 다루지 말 것.
 
 ## 스택과 배포
 
@@ -45,6 +45,7 @@
 - `src/app`: 라우터(`router.tsx`), 레이아웃(`SiteLayout`, `EmbedLayout`), 홈/404 페이지, 로드 실패 화면(`RouteErrorPage`), `ToyView`, `EmbedHead`, 사이트명(`site.ts`)
 - `src/shared` (예정): 공용 UI, 훅, 유틸. 공용화할 코드가 생기면 만든다.
 - `src/toys/<slug>/`: 토이 하나 = 폴더 하나 (`meta.ts`, 페이지 컴포넌트, 필요 시 engine/worker)
+- `src/toys/lotto/` 구성: `engine.ts`(순수 로직, 설정 검증 `validateConfig` 포함), `protocol.ts`(메인↔Worker 메시지 타입, 공유), `worker.ts`(시간 배분과 메시지만, 계산은 engine), `useLottoSimulation.ts`(Worker 수명과 status를 다루는 hook), `DevPanel.tsx`(DEV 전용 임시 검증 화면, Phase 5에서 UI로 교체), `LottoPage.tsx`, `meta.ts`. engine을 고칠 때는 `engine.test.ts`의 골든 테스트(고정 시드 결과 리터럴)가 rng 호출 순서와 결과를 고정하고 있으므로 기대값을 바꿔서 통과시키지 말 것.
 - `src/toys/types.ts`: `ToyMeta` 타입 (slug, title, description, load)
 - `src/toys/registry.ts`: 모든 토이 meta를 모으는 단일 출처(`toys` 배열). 라우트, 홈 목록 등은 여기서 생성한다.
 - 토이 목록/설명은 레지스트리와 각 meta를 참고한다. 별도 목록 문서를 만들지 말 것(중복 금지).

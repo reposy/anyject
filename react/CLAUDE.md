@@ -8,7 +8,7 @@
 
 ## 현재 상태
 
-사이트 골격 완료: 레지스트리 기반 라우팅(`/`, `/<slug>`, `/embed/<slug>`, 404)과 레이아웃 두 벌이 동작한다. 유일한 토이 `lotto`는 "준비 중" 페이지뿐이며 engine, worker, 테스트는 아직 없다. "(예정)" 표기는 아직 존재하지 않는 구조이며, 구현되기 전까지 있는 것처럼 다루지 말 것.
+사이트 골격 완료: 레지스트리 기반 라우팅(`/`, `/<slug>`, `/embed/<slug>`, 404)과 레이아웃 두 벌이 동작한다. 로또 engine(`src/toys/lotto/engine.ts`)과 단위 테스트(Vitest)가 있다. 유일한 토이 `lotto`의 화면은 아직 "준비 중" 페이지뿐이며 worker, hook, UI는 없다. "(예정)" 표기는 아직 존재하지 않는 구조이며, 구현되기 전까지 있는 것처럼 다루지 말 것.
 
 ## 스택과 배포
 
@@ -30,11 +30,15 @@
 - `npm run lint` — ESLint 전체
 - `npm run preview` — 프로덕션 빌드 로컬 서빙
 - `npm run preview:cf` — `wrangler dev`로 `dist/`를 Workers 정적 자산 방식으로 로컬 서빙(SPA 폴백 확인용, 로그인 불필요). 먼저 `npm run build` 필요. `wrangler login`/`wrangler deploy`는 실행하지 않는다(배포는 GitHub 연동).
-- 테스트 러너 없음(Vitest 도입 예정, 미설치). 단일 파일 린트: `npx eslint src/App.tsx`
+- `npm run test` — Vitest 1회 실행(`src/**/*.test.ts`)
+- `npm run test:watch` — Vitest 감시 모드
+- 단일 파일 테스트: `npx vitest run src/toys/lotto/engine.test.ts`. 단일 파일 린트: `npx eslint src/App.tsx`
 
 ## TypeScript 설정 주의점
 
 `tsconfig.app.json`: `verbatimModuleSyntax`(타입은 `import type`), `erasableSyntaxOnly`(`enum`/namespace/생성자 파라미터 프로퍼티 금지), `noUnusedLocals`/`noUnusedParameters`.
+
+테스트 파일(`*.test.ts`)은 `src` 안에 두며 `tsc -b` 대상이다. Vitest는 `globals`를 끄고 node 환경으로 돌리므로 `describe`/`it`/`expect`는 `vitest`에서 명시 import한다. 설정은 `vite.config.ts`의 `test` 필드(`defineConfig`는 `vitest/config`에서 import).
 
 ## 폴더 규칙
 

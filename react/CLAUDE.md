@@ -8,7 +8,7 @@
 
 ## 현재 상태
 
-사이트 골격 완료: 레지스트리 기반 라우팅(`/`, `/<slug>`, `/embed/<slug>`, 404)과 레이아웃 두 벌이 동작한다. 로또 engine(`src/toys/lotto/engine.ts`)과 단위 테스트(Vitest), Worker와 hook(`worker.ts`, `useLottoSimulation.ts`)이 있다. 당첨금·세금·기대값·분기점 계산(`prize.ts`, 단위 테스트 포함)과 이를 조작하는 설정 화면(`LottoSettings.tsx`, `NumberGrid.tsx`)도 있다. 유일한 토이 `lotto`의 화면은 프로덕션에서 아직 "준비 중" 페이지뿐이고, 개발 서버(`import.meta.env.DEV`)에서만 설정 화면과 임시 검증 화면(`DevPanel.tsx`, 구분선 아래)이 함께 뜬다. 설정 화면에는 시작 버튼과 시뮬레이션 연결이 아직 없다(Phase 5b에서 연결하고 DevPanel은 그때 제거한다). hook과 Worker에는 단위 테스트가 없다. "(예정)" 표기는 아직 존재하지 않는 구조이며, 구현되기 전까지 있는 것처럼 다루지 말 것.
+사이트 골격 완료: 레지스트리 기반 라우팅(`/`, `/<slug>`, `/embed/<slug>`, 404)과 레이아웃 두 벌이 동작한다. 유일한 토이 `lotto`는 프로덕션에 공개되어 있다: `/lotto`와 `/embed/lotto` 모두 실제 시뮬레이터 화면을 렌더한다(DEV 전용 분기와 임시 검증 화면 `DevPanel.tsx`는 Phase 5b에서 제거됨). 화면은 조건 설정 → 시작/일시정지/재개/정지/리셋 → 결과(상태, 누적 시도·비용·당첨금, 손익, 등수별 당첨 횟수, 완료 시 추첨/티켓) → 당첨금·세금(1등 입력, 세전/세후 토글, 통합 표) → 분기점 순으로 구성된다(`LottoPage.tsx`가 상태를 소유하고, `LottoResult.tsx`/`LottoPrizeTax.tsx`가 표시를 맡는다). 계산은 engine(`src/toys/lotto/engine.ts`)과 prize(`prize.ts`)의 순수 함수, 실행은 Worker와 hook(`worker.ts`, `useLottoSimulation.ts`)이 맡는다. hook과 Worker에는 단위 테스트가 없다. "(예정)" 표기는 아직 존재하지 않는 구조이며, 구현되기 전까지 있는 것처럼 다루지 말 것.
 
 ## 스택과 배포
 
@@ -45,7 +45,7 @@
 - `src/app`: 라우터(`router.tsx`), 레이아웃(`SiteLayout`, `EmbedLayout`), 홈/404 페이지, 로드 실패 화면(`RouteErrorPage`), `ToyView`, `EmbedHead`, 사이트명(`site.ts`)
 - `src/shared` (예정): 공용 UI, 훅, 유틸. 공용화할 코드가 생기면 만든다.
 - `src/toys/<slug>/`: 토이 하나 = 폴더 하나 (`meta.ts`, 페이지 컴포넌트, 필요 시 engine/worker)
-- `src/toys/lotto/` 구성: `engine.ts`(순수 로직, 설정 검증 `validateConfig` 포함), `prize.ts`(당첨금·세금·기대값·분기점 순수 함수, `prize.test.ts`), `protocol.ts`(메인↔Worker 메시지 타입, 공유), `worker.ts`(시간 배분과 메시지만, 계산은 engine), `useLottoSimulation.ts`(Worker 수명과 status를 다루는 hook), `LottoSettings.tsx`/`LottoSettings.module.css`(DEV 전용 설정 화면), `NumberGrid.tsx`/`NumberGrid.module.css`(1~45 번호판), `DevPanel.tsx`(DEV 전용 임시 검증 화면, Phase 5b에서 제거 예정), `LottoPage.tsx`, `meta.ts`. engine을 고칠 때는 `engine.test.ts`의 골든 테스트(고정 시드 결과 리터럴)가 rng 호출 순서와 결과를 고정하고 있으므로 기대값을 바꿔서 통과시키지 말 것.
+- `src/toys/lotto/` 구성: `engine.ts`(순수 로직, 설정 검증 `validateConfig` 포함), `prize.ts`(당첨금·세금·기대값·분기점·부호 있는 금액 표시 순수 함수, `prize.test.ts`), `messages.ts`(`ConfigError`를 화면 문구로 바꾸는 `describeConfigError`, `messages.test.ts`), `protocol.ts`(메인↔Worker 메시지 타입, 공유), `worker.ts`(시간 배분과 메시지만, 계산은 engine, 예외는 `error` 메시지로 전송), `useLottoSimulation.ts`(Worker 수명과 status를 다루는 hook), `LottoPage.tsx`(상태 소유자: 조건 입력, 실행 버튼, 하위 컴포넌트 조립), `LottoResult.tsx`(결과 표시), `LottoPrizeTax.tsx`(당첨금·세금·분기점 표시), `LottoPanel.module.css`(이 세 컴포넌트가 함께 쓰는 스타일), `NumberGrid.tsx`/`NumberGrid.module.css`(1~45 번호판), `meta.ts`. engine을 고칠 때는 `engine.test.ts`의 골든 테스트(고정 시드 결과 리터럴)가 rng 호출 순서와 결과를 고정하고 있으므로 기대값을 바꿔서 통과시키지 말 것.
 - `src/toys/types.ts`: `ToyMeta` 타입 (slug, title, description, load)
 - `src/toys/registry.ts`: 모든 토이 meta를 모으는 단일 출처(`toys` 배열). 라우트, 홈 목록 등은 여기서 생성한다.
 - 토이 목록/설명은 레지스트리와 각 meta를 참고한다. 별도 목록 문서를 만들지 말 것(중복 금지).

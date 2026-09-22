@@ -1,18 +1,20 @@
 // 1~45 번호판(7열). 고정 티켓 직접 입력에 쓴다. mode가 자동으로 바뀌어도 selected는 이 컴포넌트
-// 밖(LottoSettings)에서 유지되므로 여기서는 항상 현재 선택 상태만 그린다.
+// 밖(LottoPage)에서 유지되므로 여기서는 항상 현재 선택 상태만 그린다.
+import { MAX_NUMBER, TICKET_SIZE } from './engine.ts'
 import styles from './NumberGrid.module.css'
 
-const TICKET_SIZE = 6 // engine.ts의 티켓 크기와 같다(로또 6/45).
-// 순수 호출로 표시해 프로덕션에서 이 컴포넌트가 쓰이지 않을 때 트리셰이킹되게 한다(engine.ts의 IDENTITY와 동일).
-const NUMBERS = /* @__PURE__ */ Array.from({ length: 45 }, (_, i) => i + 1)
+// 모듈 스코프에서 한 번만 계산되는 순수 배열이라 /* @__PURE__ */로 표시한다(engine.ts의 IDENTITY와 동일한 패턴).
+const NUMBERS = /* @__PURE__ */ Array.from({ length: MAX_NUMBER }, (_, i) => i + 1)
 
 type Props = {
   selected: readonly number[]
   onToggle: (n: number) => void
   onReset: () => void
+  /** 시뮬레이션 실행 중(running/paused)에는 true로 그려 선택을 잠근다. */
+  disabled?: boolean
 }
 
-export default function NumberGrid({ selected, onToggle, onReset }: Props) {
+export default function NumberGrid({ selected, onToggle, onReset, disabled = false }: Props) {
   const isFull = selected.length >= TICKET_SIZE
 
   return (
@@ -21,7 +23,7 @@ export default function NumberGrid({ selected, onToggle, onReset }: Props) {
         <span className={styles.count}>
           {selected.length}/{TICKET_SIZE}
         </span>
-        <button type="button" onClick={onReset} disabled={selected.length === 0}>
+        <button type="button" onClick={onReset} disabled={disabled || selected.length === 0}>
           선택 초기화
         </button>
       </div>
@@ -34,7 +36,7 @@ export default function NumberGrid({ selected, onToggle, onReset }: Props) {
               type="button"
               className={styles.cell}
               aria-pressed={isSelected}
-              disabled={!isSelected && isFull}
+              disabled={disabled || (!isSelected && isFull)}
               onClick={() => onToggle(n)}
             >
               {n}

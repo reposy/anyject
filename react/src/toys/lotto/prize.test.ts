@@ -7,6 +7,7 @@ import {
   derivePrizeTable,
   expectedValueTotal,
   formatPercentDecimal,
+  formatSignedWon,
   formatWon,
   formatWonDecimal,
   prizeTableFor,
@@ -147,6 +148,20 @@ describe('formatWon', () => {
     [2_050_000_000, '20억 5,000만'],
   ])('%i -> %s', (amount, expected) => {
     expect(formatWon(amount)).toBe(expected)
+  })
+})
+
+describe('formatSignedWon', () => {
+  it.each<[number, string]>([
+    [0, '0원'],
+    [500, '+500원'],
+    [-500, '-500원'],
+    [50_000, '+5만'],
+    [-50_000, '-5만'],
+    [320_000_000, '+3억 2,000만'],
+    [-320_000_000, '-3억 2,000만'],
+  ])('%i -> %s', (amount, expected) => {
+    expect(formatSignedWon(amount)).toBe(expected)
   })
 })
 

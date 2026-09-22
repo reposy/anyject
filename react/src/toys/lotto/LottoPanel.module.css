@@ -83,22 +83,51 @@
   font-size: 0.75rem;
 }
 
-.debug {
+.tableWrap {
+  overflow-x: auto;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.snapshot {
   border: 1px dashed var(--panel-border);
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
 }
 
-.debugLabel {
-  margin: 0 0 0.25rem;
-  font-size: 0.75rem;
-  color: var(--panel-muted);
+.ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  margin: 0.15rem;
+  padding: 0 0.35rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
 }
 
-.debugPre {
-  margin: 0;
+/* 티켓과 추첨 본번호가 일치. */
+.matched {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 20%, transparent);
+  font-weight: 700;
+}
+
+/* 티켓과 추첨 보너스 번호가 일치. 본번호 일치와 배경 농도를 다르게 하되, 핵심 구분은 .bonusTag 문구가 맡는다. */
+.bonusMatched {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 40%, transparent);
+  font-weight: 700;
+}
+
+.bonusTag {
+  margin-left: 0.25rem;
   font-size: 0.7rem;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
 }

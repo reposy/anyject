@@ -31,24 +31,30 @@ function yieldToEventLoop(): Promise<void> {
 
 async function drive(current: Run): Promise<void> {
   current.driving = true
-  let lastProgress = performance.now()
-  while (!current.paused) {
-    const sliceEnd = performance.now() + SLICE_MS
-    do {
-      current.state = runBatch(current.state, current.config, CHUNK_ATTEMPTS, Math.random)
-    } while (current.state.stop === null && performance.now() < sliceEnd)
+  try {
+    let lastProgress = performance.now()
+    while (!current.paused) {
+      const sliceEnd = performance.now() + SLICE_MS
+      do {
+        current.state = runBatch(current.state, current.config, CHUNK_ATTEMPTS, Math.random)
+      } while (current.state.stop === null && performance.now() < sliceEnd)
 
-    if (current.state.stop !== null) {
-      scope.postMessage({ type: 'finished', state: current.state })
-      break
+      if (current.state.stop !== null) {
+        scope.postMessage({ type: 'finished', state: current.state })
+        return
+      }
+      if (performance.now() - lastProgress >= PROGRESS_MS) {
+        scope.postMessage({ type: 'progress', state: current.state })
+        lastProgress = performance.now()
+      }
+      await yieldToEventLoop()
     }
-    if (performance.now() - lastProgress >= PROGRESS_MS) {
-      scope.postMessage({ type: 'progress', state: current.state })
-      lastProgress = performance.now()
-    }
-    await yieldToEventLoop()
+  } catch (err) {
+    // runBatch 등이 예기치 않게 던지면 처리되지 않은 rejection으로 끝나는 대신 error 메시지로 보낸다.
+    scope.postMessage({ type: 'error', message: err instanceof Error ? err.message : String(err) })
+  } finally {
+    current.driving = false
   }
-  current.driving = false
 }
 
 scope.addEventListener('message', (event) => {

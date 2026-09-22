@@ -209,6 +209,13 @@ export function formatWon(amountWon: number): string {
     : `${eok.toLocaleString('ko-KR')}억`
 }
 
+/** 손익처럼 양수/음수 모두 나올 수 있는 금액에 부호를 붙인다. 0은 부호 없이, 크기는 formatWon을 그대로 쓴다. */
+export function formatSignedWon(amountWon: number): string {
+  if (amountWon === 0) return formatWon(0)
+  const sign = amountWon > 0 ? '+' : '-'
+  return `${sign}${formatWon(Math.abs(amountWon))}`
+}
+
 /** 1장당 기대액처럼 1원 미만이 흔한 작은 금액을 소수 첫째 자리까지 표시한다(억/만 내림은 손실이 큼). */
 export function formatWonDecimal(amountWon: number): string {
   return `${amountWon.toFixed(1)}원`

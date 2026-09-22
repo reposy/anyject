@@ -12,8 +12,8 @@ export type Rng = () => number
 
 export const RANKS: readonly Rank[] = [1, 2, 3, 4, 5]
 
-const MAX_NUMBER = 45
-const TICKET_SIZE = 6
+export const MAX_NUMBER = 45
+export const TICKET_SIZE = 6
 
 export const TICKET_PRICE = 1000
 export const RANK_COMBINATIONS: Record<Rank, number> = {

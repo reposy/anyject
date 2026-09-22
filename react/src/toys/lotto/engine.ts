@@ -28,7 +28,7 @@ export const TOTAL_COMBINATIONS = 8_145_060
 /** 4·5등만 고정 금액이다. 1~3등은 회차마다 달라 engine에 두지 않는다. */
 export const PRIZE_FIXED = { 4: 50_000, 5: 5_000 } as const
 
-const WEEKS_PER_YEAR = 52
+export const WEEKS_PER_YEAR = 52
 
 // ---- 번호 생성 ----
 

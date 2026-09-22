@@ -1,0 +1,48 @@
+.wrapper {
+  --grid-border: color-mix(in srgb, currentColor 25%, transparent);
+  --grid-selected: color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.3rem;
+}
+
+.cell {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--grid-border);
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.cell[aria-pressed='true'] {
+  background: var(--grid-selected);
+  border-color: currentColor;
+  font-weight: 700;
+}
+
+.cell:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

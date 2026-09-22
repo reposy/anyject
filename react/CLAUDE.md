@@ -8,7 +8,7 @@
 
 ## 현재 상태
 
-사이트 골격 완료: 레지스트리 기반 라우팅(`/`, `/<slug>`, `/embed/<slug>`, 404)과 레이아웃 두 벌이 동작한다. 로또 engine(`src/toys/lotto/engine.ts`)과 단위 테스트(Vitest), Worker와 hook(`worker.ts`, `useLottoSimulation.ts`)이 있다. 유일한 토이 `lotto`의 화면은 프로덕션에서 아직 "준비 중" 페이지뿐이고, 개발 서버(`import.meta.env.DEV`)에서만 임시 검증 화면(`DevPanel.tsx`)이 뜬다. 로또 UI는 없다. hook과 Worker에는 단위 테스트가 없다. "(예정)" 표기는 아직 존재하지 않는 구조이며, 구현되기 전까지 있는 것처럼 다루지 말 것.
+사이트 골격 완료: 레지스트리 기반 라우팅(`/`, `/<slug>`, `/embed/<slug>`, 404)과 레이아웃 두 벌이 동작한다. 로또 engine(`src/toys/lotto/engine.ts`)과 단위 테스트(Vitest), Worker와 hook(`worker.ts`, `useLottoSimulation.ts`)이 있다. 당첨금·세금·기대값·분기점 계산(`prize.ts`, 단위 테스트 포함)과 이를 조작하는 설정 화면(`LottoSettings.tsx`, `NumberGrid.tsx`)도 있다. 유일한 토이 `lotto`의 화면은 프로덕션에서 아직 "준비 중" 페이지뿐이고, 개발 서버(`import.meta.env.DEV`)에서만 설정 화면과 임시 검증 화면(`DevPanel.tsx`, 구분선 아래)이 함께 뜬다. 설정 화면에는 시작 버튼과 시뮬레이션 연결이 아직 없다(Phase 5b에서 연결하고 DevPanel은 그때 제거한다). hook과 Worker에는 단위 테스트가 없다. "(예정)" 표기는 아직 존재하지 않는 구조이며, 구현되기 전까지 있는 것처럼 다루지 말 것.
 
 ## 스택과 배포
 
@@ -45,7 +45,7 @@
 - `src/app`: 라우터(`router.tsx`), 레이아웃(`SiteLayout`, `EmbedLayout`), 홈/404 페이지, 로드 실패 화면(`RouteErrorPage`), `ToyView`, `EmbedHead`, 사이트명(`site.ts`)
 - `src/shared` (예정): 공용 UI, 훅, 유틸. 공용화할 코드가 생기면 만든다.
 - `src/toys/<slug>/`: 토이 하나 = 폴더 하나 (`meta.ts`, 페이지 컴포넌트, 필요 시 engine/worker)
-- `src/toys/lotto/` 구성: `engine.ts`(순수 로직, 설정 검증 `validateConfig` 포함), `protocol.ts`(메인↔Worker 메시지 타입, 공유), `worker.ts`(시간 배분과 메시지만, 계산은 engine), `useLottoSimulation.ts`(Worker 수명과 status를 다루는 hook), `DevPanel.tsx`(DEV 전용 임시 검증 화면, Phase 5에서 UI로 교체), `LottoPage.tsx`, `meta.ts`. engine을 고칠 때는 `engine.test.ts`의 골든 테스트(고정 시드 결과 리터럴)가 rng 호출 순서와 결과를 고정하고 있으므로 기대값을 바꿔서 통과시키지 말 것.
+- `src/toys/lotto/` 구성: `engine.ts`(순수 로직, 설정 검증 `validateConfig` 포함), `prize.ts`(당첨금·세금·기대값·분기점 순수 함수, `prize.test.ts`), `protocol.ts`(메인↔Worker 메시지 타입, 공유), `worker.ts`(시간 배분과 메시지만, 계산은 engine), `useLottoSimulation.ts`(Worker 수명과 status를 다루는 hook), `LottoSettings.tsx`/`LottoSettings.module.css`(DEV 전용 설정 화면), `NumberGrid.tsx`/`NumberGrid.module.css`(1~45 번호판), `DevPanel.tsx`(DEV 전용 임시 검증 화면, Phase 5b에서 제거 예정), `LottoPage.tsx`, `meta.ts`. engine을 고칠 때는 `engine.test.ts`의 골든 테스트(고정 시드 결과 리터럴)가 rng 호출 순서와 결과를 고정하고 있으므로 기대값을 바꿔서 통과시키지 말 것.
 - `src/toys/types.ts`: `ToyMeta` 타입 (slug, title, description, load)
 - `src/toys/registry.ts`: 모든 토이 meta를 모으는 단일 출처(`toys` 배열). 라우트, 홈 목록 등은 여기서 생성한다.
 - 토이 목록/설명은 레지스트리와 각 meta를 참고한다. 별도 목록 문서를 만들지 말 것(중복 금지).
@@ -65,6 +65,13 @@
 - engine: 순수 함수. 단위 테스트 대상.
 - 무거운 연산은 Web Worker에서 실행한다. 메인 스레드 블로킹 금지.
 - UI는 hook을 통해 engine/worker 상태를 구독한다.
+
+## 스타일
+
+- CSS Modules(`*.module.css`)를 쓴다. 컴포넌트와 같은 폴더에 co-locate하고(예: `LottoSettings.tsx` ↔ `LottoSettings.module.css`), 클래스 이름은 컴포넌트 안에서 `styles.xxx`로만 참조한다.
+- 전역 스타일은 `src/index.css`(리셋 수준)와 `src/app/layout.css`(사이트 레이아웃)뿐이다. 새 전역 규칙을 추가하지 말고, 토이별 스타일은 각 토이 폴더의 CSS Modules로만 한다.
+- 색상은 하드코딩을 최소화한다. 테두리·강조색처럼 배경에 따라 달라져야 하는 값은 `layout.css`처럼 `color-mix(in srgb, currentColor N%, transparent)`로 `currentColor` 기준 로컬 변수를 만들어 쓴다.
+- 사이트 전체 디자인 정리는 Phase 6에서 한다. 그 전까지 토이 스타일은 읽기 쉬운 최소한으로 유지한다.
 
 ## 레이아웃 두 벌
 
